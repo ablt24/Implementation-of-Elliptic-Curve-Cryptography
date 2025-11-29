@@ -1,0 +1,90 @@
+# Elliptic Curve Cryptosystem (ECC) – Python Implementation
+# Curve: y^2 = x^3 + a*x + b (mod p)
+
+# Curve parameters (toy example — NOT secure)
+p = 751
+a = -1
+b = 1
+
+# Base point
+G = (0, 1)
+
+# ------------------------
+# Modular arithmetic
+# ------------------------
+def mod(x):
+    return x % p
+
+def mod_inv(x):
+    """Modular inverse using Extended Euclidean Algorithm"""
+    return pow(x, -1, p)
+
+# ------------------------
+# Elliptic Curve Operations
+# ------------------------
+def point_add(P, Q):
+    """Add two points P and Q on the curve"""
+
+    if P is None:  # Identity element
+        return Q
+    if Q is None:
+        return P
+
+    x1, y1 = P
+    x2, y2 = Q
+
+    # P = -Q → point at infinity
+    if x1 == x2 and (y1 + y2) % p == 0:
+        return None
+
+    # Slope calculation
+    if P == Q:  # Point doubling
+        m = (3 * x1 * x1 + a) * mod_inv(2 * y1) % p
+    else:       # Point addition
+        m = (y2 - y1) * mod_inv(x2 - x1) % p
+
+    x3 = (m * m - x1 - x2) % p
+    y3 = (m * (x1 - x3) - y1) % p
+
+    return (x3, y3)
+
+def scalar_mult(k, P):
+    """Compute k * P using double-and-add"""
+    result = None  # Start with point at infinity
+    addend = P
+
+    while k > 0:
+        if k & 1:
+            result = point_add(result, addend)
+        addend = point_add(addend, addend)
+        k >>= 1
+
+    return result
+
+# ------------------------
+# ECC Demo (ECDH Key Exchange)
+# ------------------------
+print("Elliptic Curve: y^2 = x^3 - x + 1 (mod 751)")
+print("Base Point G =", G)
+
+# Alice
+a_priv = int(input("Enter Alice's private key: "))
+A_pub = scalar_mult(a_priv, G)
+print("Alice Public Key:", A_pub)
+
+# Bob
+b_priv = int(input("Enter Bob's private key: "))
+B_pub = scalar_mult(b_priv, G)
+print("Bob Public Key  :", B_pub)
+
+# Shared secret
+S1 = scalar_mult(a_priv, B_pub)
+S2 = scalar_mult(b_priv, A_pub)
+
+print("\nShared Secret (Alice):", S1)
+print("Shared Secret (Bob)  :", S2)
+
+if S1 == S2:
+    print("\nShared secret MATCHES! ✔")
+else:
+    print("\nShared secret does NOT match ❌")
